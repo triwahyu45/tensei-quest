@@ -6,35 +6,45 @@
     color: #e2e8f0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
 /* Solo Leveling Sci-Fi Glowing Accents */
 .glow-blue {
-  box-shadow: 0 0 20px rgba(0, 195, 255, 0.45);
+  box-shadow: 0 0 25px rgba(0, 195, 255, 0.45);
 }
 
 .glow-blue-sm {
-  box-shadow: 0 0 10px rgba(0, 195, 255, 0.3);
+  box-shadow: 0 0 12px rgba(0, 195, 255, 0.35);
 }
 
 .glow-red {
-  box-shadow: 0 0 25px rgba(255, 30, 86, 0.7);
+  box-shadow: 0 0 30px rgba(255, 30, 86, 0.7);
+}
+
+.glow-gold {
+  box-shadow: 0 0 25px rgba(245, 158, 11, 0.6);
 }
 
 .glow-text-blue {
-  text-shadow: 0 0 10px rgba(56, 189, 248, 0.8), 0 0 20px rgba(14, 165, 233, 0.5);
+  text-shadow: 0 0 12px rgba(56, 189, 248, 0.8), 0 0 24px rgba(14, 165, 233, 0.5);
 }
 
 .glow-text-red {
-  text-shadow: 0 0 12px rgba(239, 68, 68, 0.9), 0 0 24px rgba(220, 38, 38, 0.6);
+  text-shadow: 0 0 14px rgba(239, 68, 68, 0.9), 0 0 28px rgba(220, 38, 38, 0.6);
 }
 
-/* System Window Frame Styles */
+.glow-text-gold {
+  text-shadow: 0 0 14px rgba(245, 158, 11, 0.9), 0 0 28px rgba(217, 119, 6, 0.6);
+}
+
+/* System Window Frame Styles with Neon Border Glow */
 .system-card {
-  background: linear-gradient(135deg, rgba(8, 17, 36, 0.92) 0%, rgba(4, 10, 24, 0.96) 100%);
-  border: 1px solid rgba(56, 189, 248, 0.3);
+  background: linear-gradient(135deg, rgba(8, 17, 36, 0.94) 0%, rgba(4, 10, 24, 0.98) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.35);
   position: relative;
+  transition: all 0.3s ease;
 }
 
 .system-card::before {
@@ -43,13 +53,14 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.8), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(56, 189, 248, 0.9), transparent);
+  animation: scanlinePulse 3s infinite ease-in-out;
 }
 
 .system-card-red {
-  background: linear-gradient(135deg, rgba(38, 8, 14, 0.95) 0%, rgba(24, 4, 8, 0.98) 100%);
-  border: 1px solid rgba(239, 68, 68, 0.5);
+  background: linear-gradient(135deg, rgba(38, 8, 14, 0.96) 0%, rgba(24, 4, 8, 0.99) 100%);
+  border: 1.5px solid rgba(239, 68, 68, 0.6);
   position: relative;
 }
 
@@ -61,6 +72,32 @@
   right: 0;
   height: 2px;
   background: linear-gradient(90deg, transparent, rgba(239, 68, 68, 0.9), transparent);
+}
+
+/* Solo Leveling Keyframes */
+@keyframes scanlinePulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes rankAura {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 8px rgba(0, 217, 255, 0.6));
+  }
+  50% {
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 16px rgba(0, 217, 255, 0.9));
+  }
+}
+
+.animate-rank-aura {
+  animation: rankAura 2.5s infinite ease-in-out;
+}
+
+/* Safe area padding for iPhone / mobile navigation */
+.safe-area-pb {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* Custom Scrollbar */
