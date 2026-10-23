@@ -258,14 +258,14 @@ export function App() {
           <div className="flex items-center justify-between w-full md:w-auto gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-black text-lg shadow glow-blue-sm">
-                S
+                T
               </div>
               <div>
                 <h1 className="text-base font-black tracking-wider text-white flex items-center gap-2">
-                  SOLO LEVELING <span className="text-cyan-400 font-mono text-xs font-normal">v1.1</span>
+                  TENSEI QUEST <span className="text-cyan-400 font-mono text-xs font-normal">v1.1</span>
                 </h1>
                 <p className="text-[10px] text-cyan-300/70 font-mono">
-                  Hunter: <strong className="text-white">{currentUsername}</strong> &bull; Level {player.level}
+                  The Rebirth System &bull; <strong className="text-white">{currentUsername}</strong> &bull; Level {player.level}
                 </p>
               </div>
             </div>
@@ -409,7 +409,7 @@ export function App() {
       <footer className="border-t border-cyan-950 bg-[#040713] px-4 py-3 text-xs text-slate-500 font-mono">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
-            &copy; 2026 Solo Leveling System &bull; Active Hunter: <strong className="text-cyan-400">{currentUsername}</strong>
+            &copy; 2026 Tensei Quest (転生クエスト) &bull; Active Player: <strong className="text-cyan-400">{currentUsername}</strong>
           </div>
 
           <div className="flex items-center gap-3">

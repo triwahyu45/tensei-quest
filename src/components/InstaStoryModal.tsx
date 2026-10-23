@@ -40,7 +40,7 @@ export const InstaStoryModal: React.FC<InstaStoryModalProps> = ({
         pixelRatio: 2.5, // Crisp HD 1080p+ export
       });
       const link = document.createElement('a');
-      link.download = `Solo_Leveling_Story_${player.name.replace(/\s+/g, '_')}_${Date.now()}.png`;
+      link.download = `Tensei_Quest_Story_${player.name.replace(/\s+/g, '_')}_${Date.now()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -58,13 +58,13 @@ export const InstaStoryModal: React.FC<InstaStoryModalProps> = ({
       const blob = await toBlob(cardRef.current, { quality: 0.98, pixelRatio: 2.5 });
       if (!blob) throw new Error('Blob conversion failed');
 
-      const file = new File([blob], `Solo_Leveling_Quest_${Date.now()}.png`, { type: 'image/png' });
+      const file = new File([blob], `Tensei_Quest_${Date.now()}.png`, { type: 'image/png' });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: 'Solo Leveling: Daily Quest Completed',
-          text: `Saya telah menuntaskan quest harian Solo Leveling! [Lv. ${player.level} Rank ${player.rank}]`,
+          title: 'Tensei Quest: Rebirth Awakening',
+          text: `Saya telah menuntaskan quest harian Tensei Quest! [Lv. ${player.level} Rank ${player.rank}]`,
         });
       } else {
         // Fallback to download
@@ -188,7 +188,7 @@ export const InstaStoryModal: React.FC<InstaStoryModalProps> = ({
               &ldquo;Tidak ada lagi alasan untuk menyerah. Setiap repetisi adalah langkah menuju kebangkitan.&rdquo;
             </p>
             <div className="flex items-center justify-center gap-1.5 text-[9px] font-mono text-cyan-400/80 mt-2 uppercase tracking-widest">
-              <Flame className="w-3 h-3 text-cyan-400" /> Powered by Solo Leveling System
+              <Flame className="w-3 h-3 text-cyan-400" /> Powered by Tensei Quest (転生クエスト)
             </div>
           </div>
         </div>
