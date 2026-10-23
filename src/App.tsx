@@ -6,57 +6,93 @@ import { DailyQuests } from './components/DailyQuests';
 import { TimetableSchedule } from './components/TimetableSchedule';
 import { SkillTree } from './components/SkillTree';
 import { PenaltyZoneModal } from './components/PenaltyZoneModal';
+import { AuthModal } from './components/AuthModal';
+import { InstaStoryModal } from './components/InstaStoryModal';
+import { getCurrentSessionUser, logoutUser, deleteCurrentUserAccount } from './utils/auth';
 import { playSound } from './utils/audio';
-import { Shield, CheckSquare, Calendar, Award, Download, Upload, RotateCcw } from 'lucide-react';
+import { Shield, CheckSquare, Calendar, Award, Download, Upload, RotateCcw, Share2, LogOut, Trash2, User } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 const STORAGE_KEY = 'tri_wahyu_solo_leveling_v1';
 
 export function App() {
-  // Load State from LocalStorage or Default
+  const [currentUsername, setCurrentUsername] = useState<string>(() => getCurrentSessionUser());
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [isStoryOpen, setIsStoryOpen] = useState(false);
+
+  // Dynamic user data keys based on active account
+  const getUserKey = (type: string) => `${STORAGE_KEY}_${currentUsername.toLowerCase()}_${type}`;
+
   const [player, setPlayer] = useState<PlayerProfile>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_player`);
-    return saved ? JSON.parse(saved) : initialPlayer;
+    const saved = localStorage.getItem(getUserKey('player'));
+    if (saved) return JSON.parse(saved);
+    // If Triwahyu45, load his real data, otherwise clean slate
+    return currentUsername.toLowerCase() === 'triwahyu45'
+      ? initialPlayer
+      : { ...initialPlayer, name: currentUsername, nim: 'HUNTER-' + Math.floor(1000 + Math.random() * 9000) };
   });
 
   const [quests, setQuests] = useState<DailyQuest[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_quests`);
+    const saved = localStorage.getItem(getUserKey('quests'));
     return saved ? JSON.parse(saved) : initialQuests;
   });
 
   const [slots, setSlots] = useState<TimetableSlot[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_slots`);
+    const saved = localStorage.getItem(getUserKey('slots'));
     return saved ? JSON.parse(saved) : initialTimetable;
   });
 
   const [skills] = useState<SkillItem[]>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_skills`);
+    const saved = localStorage.getItem(getUserKey('skills'));
     return saved ? JSON.parse(saved) : initialSkills;
   });
 
   const [penalty, setPenalty] = useState<PenaltyZoneState>(() => {
-    const saved = localStorage.getItem(`${STORAGE_KEY}_penalty`);
+    const saved = localStorage.getItem(getUserKey('penalty'));
     return saved ? JSON.parse(saved) : defaultPenaltyState;
   });
 
   const [activeTab, setActiveTab] = useState<'status' | 'quests' | 'schedule' | 'skills'>('status');
 
-  // Sync to LocalStorage
+  // Reload data when active user changes
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_player`, JSON.stringify(player));
-  }, [player]);
+    const savedPlayer = localStorage.getItem(getUserKey('player'));
+    if (savedPlayer) {
+      setPlayer(JSON.parse(savedPlayer));
+    } else {
+      setPlayer(
+        currentUsername.toLowerCase() === 'triwahyu45'
+          ? initialPlayer
+          : { ...initialPlayer, name: currentUsername, nim: 'HUNTER-' + Math.floor(1000 + Math.random() * 9000) }
+      );
+    }
+
+    const savedQuests = localStorage.getItem(getUserKey('quests'));
+    setQuests(savedQuests ? JSON.parse(savedQuests) : initialQuests);
+
+    const savedSlots = localStorage.getItem(getUserKey('slots'));
+    setSlots(savedSlots ? JSON.parse(savedSlots) : initialTimetable);
+
+    const savedPenalty = localStorage.getItem(getUserKey('penalty'));
+    setPenalty(savedPenalty ? JSON.parse(savedPenalty) : defaultPenaltyState);
+  }, [currentUsername]);
+
+  // Sync state to current user's isolated storage
+  useEffect(() => {
+    localStorage.setItem(getUserKey('player'), JSON.stringify(player));
+  }, [player, currentUsername]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_quests`, JSON.stringify(quests));
-  }, [quests]);
+    localStorage.setItem(getUserKey('quests'), JSON.stringify(quests));
+  }, [quests, currentUsername]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_slots`, JSON.stringify(slots));
-  }, [slots]);
+    localStorage.setItem(getUserKey('slots'), JSON.stringify(slots));
+  }, [slots, currentUsername]);
 
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}_penalty`, JSON.stringify(penalty));
-  }, [penalty]);
+    localStorage.setItem(getUserKey('penalty'), JSON.stringify(penalty));
+  }, [penalty, currentUsername]);
 
   // Upgrade Player Stat
   const handleUpgradeStat = (statKey: keyof PlayerStats) => {
@@ -86,19 +122,17 @@ export function App() {
     let newMaxExp = player.maxExp;
     let newStatPoints = player.statPoints;
 
-    // Check level up
     while (newExp >= newMaxExp) {
       newExp -= newMaxExp;
       newLevel += 1;
       newMaxExp = Math.round(newMaxExp * 1.25);
-      newStatPoints += 3; // +3 stat points per level!
+      newStatPoints += 3;
     }
 
-    // Rank promotions
     let newRank = player.rank;
     let newTitle = player.title;
-    if (newLevel >= 20) { newRank = 'S'; newTitle = 'Shadow Monarch of Mechatronics'; }
-    else if (newLevel >= 15) { newRank = 'A'; newTitle = 'High-Rank Mechatronics Architect'; }
+    if (newLevel >= 20) { newRank = 'S'; newTitle = 'Shadow Monarch'; }
+    else if (newLevel >= 15) { newRank = 'A'; newTitle = 'High-Rank Architect'; }
     else if (newLevel >= 10) { newRank = 'B'; newTitle = 'Vanguard Engineer'; }
     else if (newLevel >= 5) { newRank = 'C'; newTitle = 'The Awakening Fighter'; }
     else if (newLevel >= 2) { newRank = 'D'; newTitle = 'Disciplined Hunter'; }
@@ -112,21 +146,23 @@ export function App() {
       maxExp: newMaxExp,
       statPoints: newStatPoints,
       hp: Math.min(prev.maxHp, prev.hp + 20),
-      fatigue: Math.max(0, prev.fatigue - 25), // Recovery!
+      fatigue: Math.max(0, prev.fatigue - 25),
     }));
 
-    // Reset quests for tomorrow
     setQuests((prev) => prev.map((q) => ({ ...q, completed: false })));
+
+    // Open Insta Story congratulation prompt
+    setTimeout(() => {
+      setIsStoryOpen(true);
+    }, 800);
   };
 
-  // Toggle Schedule Slot
   const handleToggleSlot = (slotId: string) => {
     setSlots((prev) =>
       prev.map((s) => (s.id === slotId ? { ...s, completed: !s.completed } : s))
     );
   };
 
-  // Penalty Zone Trigger / Simulation
   const handleTriggerPenaltyTest = () => {
     playSound.penaltyAlarm();
     setPenalty({
@@ -144,29 +180,44 @@ export function App() {
   };
 
   const handleClearPenalty = () => {
-    confetti({
-      particleCount: 100,
-      spread: 80,
-      origin: { y: 0.5 },
-    });
-    setPenalty((prev) => ({
-      ...prev,
-      isActive: false,
-    }));
+    confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } });
+    setPenalty((prev) => ({ ...prev, isActive: false }));
   };
 
-  // Export / Backup State to JSON
+  // Logout Handler
+  const handleLogout = () => {
+    logoutUser();
+    setIsAuthOpen(true);
+  };
+
+  // Delete Account Handler
+  const handleDeleteAccount = () => {
+    if (confirm(`PERINGATAN KERAS: Hapus akun [${currentUsername}] dan seluruh datanya secara permanen?`)) {
+      deleteCurrentUserAccount();
+      alert('Akun telah dihapus dari sistem.');
+      setCurrentUsername('Triwahyu45');
+      setIsAuthOpen(true);
+    }
+  };
+
+  // Auth Success
+  const handleAuthSuccess = (newUsername: string) => {
+    setCurrentUsername(newUsername);
+    setIsAuthOpen(false);
+  };
+
+  // Export JSON
   const handleExportData = () => {
     const backup = { player, quests, slots, skills, penalty, exportDate: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Tri_Wahyu_Solo_Leveling_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `Solo_Leveling_${currentUsername}_Backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
   };
 
-  // Import State from JSON
+  // Import JSON
   const handleImportData = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -187,12 +238,15 @@ export function App() {
 
   // Reset to Initial
   const handleReset = () => {
-    if (confirm('Yakin ingin mereset seluruh data kembali ke awal?')) {
-      setPlayer(initialPlayer);
+    if (confirm('Yakin ingin mereset data akun ini ke kondisi awal?')) {
+      setPlayer(
+        currentUsername.toLowerCase() === 'triwahyu45'
+          ? initialPlayer
+          : { ...initialPlayer, name: currentUsername }
+      );
       setQuests(initialQuests);
       setSlots(initialTimetable);
       setPenalty(defaultPenaltyState);
-      localStorage.clear();
     }
   };
 
@@ -200,18 +254,31 @@ export function App() {
     <div className="min-h-screen bg-[#050811] text-slate-100 flex flex-col font-sans selection:bg-cyan-500 selection:text-black">
       {/* Top Futuristic Navigation Bar */}
       <header className="border-b border-cyan-900/50 bg-[#060c1d]/90 backdrop-blur-md sticky top-0 z-40 px-4 py-3 shadow-lg">
-        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-black text-lg shadow glow-blue-sm">
-              S
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex items-center justify-between w-full md:w-auto gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600 flex items-center justify-center font-black text-black text-lg shadow glow-blue-sm">
+                S
+              </div>
+              <div>
+                <h1 className="text-base font-black tracking-wider text-white flex items-center gap-2">
+                  SOLO LEVELING <span className="text-cyan-400 font-mono text-xs font-normal">v1.1</span>
+                </h1>
+                <p className="text-[10px] text-cyan-300/70 font-mono">
+                  Hunter: <strong className="text-white">{currentUsername}</strong> &bull; Level {player.level}
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-base font-black tracking-wider text-white flex items-center gap-2">
-                SOLO LEVELING <span className="text-cyan-400 font-mono text-xs font-normal">v1.0</span>
-              </h1>
-              <p className="text-[10px] text-cyan-300/70 font-mono">
-                The Personal Awakening System &bull; Tri Wahyu Handoyo
-              </p>
+
+            {/* Quick Share to Insta Story Icon on Mobile */}
+            <div className="flex md:hidden items-center gap-2">
+              <button
+                onClick={() => setIsStoryOpen(true)}
+                className="p-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow"
+                title="Share Insta Story"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
             </div>
           </div>
 
@@ -258,6 +325,32 @@ export function App() {
               <Award className="w-3.5 h-3.5" /> Skill Tree
             </button>
           </nav>
+
+          {/* Account Actions (Story, Switch Account, Logout) */}
+          <div className="hidden md:flex items-center gap-2 font-mono text-xs">
+            <button
+              onClick={() => setIsStoryOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold transition shadow"
+            >
+              <Share2 className="w-3.5 h-3.5" /> Insta Story
+            </button>
+
+            <button
+              onClick={() => setIsAuthOpen(true)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 border border-cyan-900/60 text-cyan-300 hover:text-white transition"
+              title="Ganti Akun / Daftar"
+            >
+              <User className="w-3.5 h-3.5" /> Akun
+            </button>
+
+            <button
+              onClick={handleLogout}
+              className="p-1.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-400 hover:text-red-400 transition"
+              title="Keluar (Logout)"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -293,18 +386,30 @@ export function App() {
         )}
       </main>
 
-      {/* Penalty Modal */}
+      {/* Modals */}
       <PenaltyZoneModal
         penalty={penalty}
         onTogglePenaltyTask={handleTogglePenaltyTask}
         onClearPenalty={handleClearPenalty}
       />
 
-      {/* Bottom Utility Bar (Backup, Restore, Reset) */}
+      <AuthModal
+        isOpen={isAuthOpen}
+        onSuccess={handleAuthSuccess}
+      />
+
+      <InstaStoryModal
+        isOpen={isStoryOpen}
+        onClose={() => setIsStoryOpen(false)}
+        player={player}
+        quests={quests}
+      />
+
+      {/* Bottom Utility Bar (Backup, Restore, Delete Account) */}
       <footer className="border-t border-cyan-950 bg-[#040713] px-4 py-3 text-xs text-slate-500 font-mono">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
-            &copy; 2026 Tri Wahyu Handoyo (NIM 22518241023) &bull; S1 Pendidikan Teknik Mekatronika UNY
+            &copy; 2026 Solo Leveling System &bull; Active Hunter: <strong className="text-cyan-400">{currentUsername}</strong>
           </div>
 
           <div className="flex items-center gap-3">
@@ -323,10 +428,18 @@ export function App() {
 
             <button
               onClick={handleReset}
-              className="flex items-center gap-1 text-red-400/80 hover:text-red-300 transition"
+              className="flex items-center gap-1 text-amber-400/80 hover:text-amber-300 transition"
               title="Reset ke Pengaturan Awal"
             >
               <RotateCcw className="w-3.5 h-3.5" /> Reset
+            </button>
+
+            <button
+              onClick={handleDeleteAccount}
+              className="flex items-center gap-1 text-red-500/80 hover:text-red-400 transition"
+              title="Hapus Akun Ini Permanen"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Hapus Akun
             </button>
           </div>
         </div>
