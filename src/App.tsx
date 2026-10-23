@@ -8,28 +8,30 @@ import { SkillTree } from './components/SkillTree';
 import { PenaltyZoneModal } from './components/PenaltyZoneModal';
 import { AuthModal } from './components/AuthModal';
 import { InstaStoryModal } from './components/InstaStoryModal';
+import { SystemChatbot } from './components/SystemChatbot';
 import { getCurrentSessionUser, logoutUser, deleteCurrentUserAccount } from './utils/auth';
 import { playSound } from './utils/audio';
-import { Shield, CheckSquare, Calendar, Award, Download, Upload, RotateCcw, Share2, LogOut, Trash2, User } from 'lucide-react';
+import { Shield, CheckSquare, Calendar, Award, Download, Upload, RotateCcw, Share2, LogOut, Trash2, User, Bot } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-const STORAGE_KEY = 'tri_wahyu_solo_leveling_v1';
+const STORAGE_KEY = 'tensei_quest_v1';
 
 export function App() {
-  const [currentUsername, setCurrentUsername] = useState<string>(() => getCurrentSessionUser());
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [currentUsername, setCurrentUsername] = useState<string>(() => getCurrentSessionUser() || '');
+  const [isAuthOpen, setIsAuthOpen] = useState(() => !getCurrentSessionUser());
   const [isStoryOpen, setIsStoryOpen] = useState(false);
 
   // Dynamic user data keys based on active account
-  const getUserKey = (type: string) => `${STORAGE_KEY}_${currentUsername.toLowerCase()}_${type}`;
+  const getUserKey = (type: string) => `${STORAGE_KEY}_${(currentUsername || 'guest').toLowerCase()}_${type}`;
 
   const [player, setPlayer] = useState<PlayerProfile>(() => {
     const saved = localStorage.getItem(getUserKey('player'));
     if (saved) return JSON.parse(saved);
-    // If Triwahyu45, load his real data, otherwise clean slate
-    return currentUsername.toLowerCase() === 'triwahyu45'
-      ? initialPlayer
-      : { ...initialPlayer, name: currentUsername, nim: 'HUNTER-' + Math.floor(1000 + Math.random() * 9000) };
+    return {
+      ...initialPlayer,
+      name: currentUsername || 'Player Baru',
+      nim: `HUNTER-${Math.floor(1000 + Math.random() * 9000)}`,
+    };
   });
 
   const [quests, setQuests] = useState<DailyQuest[]>(() => {
@@ -52,19 +54,24 @@ export function App() {
     return saved ? JSON.parse(saved) : defaultPenaltyState;
   });
 
-  const [activeTab, setActiveTab] = useState<'status' | 'quests' | 'schedule' | 'skills'>('status');
+  const [activeTab, setActiveTab] = useState<'status' | 'quests' | 'schedule' | 'skills' | 'ai'>('status');
 
   // Reload data when active user changes
   useEffect(() => {
+    if (!currentUsername) {
+      setIsAuthOpen(true);
+      return;
+    }
+
     const savedPlayer = localStorage.getItem(getUserKey('player'));
     if (savedPlayer) {
       setPlayer(JSON.parse(savedPlayer));
     } else {
-      setPlayer(
-        currentUsername.toLowerCase() === 'triwahyu45'
-          ? initialPlayer
-          : { ...initialPlayer, name: currentUsername, nim: 'HUNTER-' + Math.floor(1000 + Math.random() * 9000) }
-      );
+      setPlayer({
+        ...initialPlayer,
+        name: currentUsername,
+        nim: `HUNTER-${Math.floor(1000 + Math.random() * 9000)}`,
+      });
     }
 
     const savedQuests = localStorage.getItem(getUserKey('quests'));
@@ -79,19 +86,27 @@ export function App() {
 
   // Sync state to current user's isolated storage
   useEffect(() => {
-    localStorage.setItem(getUserKey('player'), JSON.stringify(player));
+    if (currentUsername) {
+      localStorage.setItem(getUserKey('player'), JSON.stringify(player));
+    }
   }, [player, currentUsername]);
 
   useEffect(() => {
-    localStorage.setItem(getUserKey('quests'), JSON.stringify(quests));
+    if (currentUsername) {
+      localStorage.setItem(getUserKey('quests'), JSON.stringify(quests));
+    }
   }, [quests, currentUsername]);
 
   useEffect(() => {
-    localStorage.setItem(getUserKey('slots'), JSON.stringify(slots));
+    if (currentUsername) {
+      localStorage.setItem(getUserKey('slots'), JSON.stringify(slots));
+    }
   }, [slots, currentUsername]);
 
   useEffect(() => {
-    localStorage.setItem(getUserKey('penalty'), JSON.stringify(penalty));
+    if (currentUsername) {
+      localStorage.setItem(getUserKey('penalty'), JSON.stringify(penalty));
+    }
   }, [penalty, currentUsername]);
 
   // Upgrade Player Stat
@@ -131,9 +146,9 @@ export function App() {
 
     let newRank = player.rank;
     let newTitle = player.title;
-    if (newLevel >= 20) { newRank = 'S'; newTitle = 'Shadow Monarch'; }
+    if (newLevel >= 20) { newRank = 'S'; newTitle = 'Shadow Monarch of Awakening'; }
     else if (newLevel >= 15) { newRank = 'A'; newTitle = 'High-Rank Architect'; }
-    else if (newLevel >= 10) { newRank = 'B'; newTitle = 'Vanguard Engineer'; }
+    else if (newLevel >= 10) { newRank = 'B'; newTitle = 'Vanguard Hunter'; }
     else if (newLevel >= 5) { newRank = 'C'; newTitle = 'The Awakening Fighter'; }
     else if (newLevel >= 2) { newRank = 'D'; newTitle = 'Disciplined Hunter'; }
 
@@ -187,15 +202,17 @@ export function App() {
   // Logout Handler
   const handleLogout = () => {
     logoutUser();
+    setCurrentUsername('');
     setIsAuthOpen(true);
   };
 
   // Delete Account Handler
   const handleDeleteAccount = () => {
-    if (confirm(`PERINGATAN KERAS: Hapus akun [${currentUsername}] dan seluruh datanya secara permanen?`)) {
+    if (!currentUsername) return;
+    if (confirm(`PERINGATAN: Hapus akun [${currentUsername}] dan seluruh datanya secara permanen?`)) {
       deleteCurrentUserAccount();
-      alert('Akun telah dihapus dari sistem.');
-      setCurrentUsername('Triwahyu45');
+      alert('Akun telah dihapus.');
+      setCurrentUsername('');
       setIsAuthOpen(true);
     }
   };
@@ -213,7 +230,7 @@ export function App() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Solo_Leveling_${currentUsername}_Backup_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `Tensei_Quest_${currentUsername || 'Hunter'}_Backup_${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
   };
 
@@ -228,7 +245,7 @@ export function App() {
         if (parsed.player) setPlayer(parsed.player);
         if (parsed.quests) setQuests(parsed.quests);
         if (parsed.slots) setSlots(parsed.slots);
-        alert('Data Solo Leveling berhasil dipulihkan!');
+        alert('Data berhasil dipulihkan!');
       } catch {
         alert('Format file JSON tidak valid!');
       }
@@ -239,11 +256,10 @@ export function App() {
   // Reset to Initial
   const handleReset = () => {
     if (confirm('Yakin ingin mereset data akun ini ke kondisi awal?')) {
-      setPlayer(
-        currentUsername.toLowerCase() === 'triwahyu45'
-          ? initialPlayer
-          : { ...initialPlayer, name: currentUsername }
-      );
+      setPlayer({
+        ...initialPlayer,
+        name: currentUsername || 'Player',
+      });
       setQuests(initialQuests);
       setSlots(initialTimetable);
       setPenalty(defaultPenaltyState);
@@ -262,10 +278,10 @@ export function App() {
               </div>
               <div>
                 <h1 className="text-base font-black tracking-wider text-white flex items-center gap-2">
-                  TENSEI QUEST <span className="text-cyan-400 font-mono text-xs font-normal">v1.1</span>
+                  TENSEI QUEST <span className="text-cyan-400 font-mono text-xs font-normal">v1.2</span>
                 </h1>
                 <p className="text-[10px] text-cyan-300/70 font-mono">
-                  The Rebirth System &bull; <strong className="text-white">{currentUsername}</strong> &bull; Level {player.level}
+                  Hunter: <strong className="text-white">{currentUsername || 'Belum Login'}</strong> &bull; Level {player.level}
                 </p>
               </div>
             </div>
@@ -283,10 +299,10 @@ export function App() {
           </div>
 
           {/* Navigation Tabs */}
-          <nav className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-cyan-900/60 font-mono text-xs">
+          <nav className="flex items-center gap-1.5 bg-slate-950/80 p-1 rounded-xl border border-cyan-900/60 font-mono text-xs overflow-x-auto max-w-full">
             <button
               onClick={() => setActiveTab('status')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
                 activeTab === 'status'
                   ? 'bg-cyan-600 text-white shadow glow-blue-sm'
                   : 'text-slate-400 hover:text-cyan-200'
@@ -296,7 +312,7 @@ export function App() {
             </button>
             <button
               onClick={() => setActiveTab('quests')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
                 activeTab === 'quests'
                   ? 'bg-cyan-600 text-white shadow glow-blue-sm'
                   : 'text-slate-400 hover:text-cyan-200'
@@ -306,17 +322,17 @@ export function App() {
             </button>
             <button
               onClick={() => setActiveTab('schedule')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
                 activeTab === 'schedule'
                   ? 'bg-cyan-600 text-white shadow glow-blue-sm'
                   : 'text-slate-400 hover:text-cyan-200'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5" /> Jadwal Kuliah
+              <Calendar className="w-3.5 h-3.5" /> Jadwal
             </button>
             <button
               onClick={() => setActiveTab('skills')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
                 activeTab === 'skills'
                   ? 'bg-cyan-600 text-white shadow glow-blue-sm'
                   : 'text-slate-400 hover:text-cyan-200'
@@ -324,9 +340,19 @@ export function App() {
             >
               <Award className="w-3.5 h-3.5" /> Skill Tree
             </button>
+            <button
+              onClick={() => setActiveTab('ai')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition whitespace-nowrap ${
+                activeTab === 'ai'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow'
+                  : 'text-cyan-400 hover:text-cyan-200'
+              }`}
+            >
+              <Bot className="w-3.5 h-3.5" /> System AI
+            </button>
           </nav>
 
-          {/* Account Actions (Story, Switch Account, Logout) */}
+          {/* Account Actions */}
           <div className="hidden md:flex items-center gap-2 font-mono text-xs">
             <button
               onClick={() => setIsStoryOpen(true)}
@@ -384,6 +410,10 @@ export function App() {
         {activeTab === 'skills' && (
           <SkillTree skills={skills} />
         )}
+
+        {activeTab === 'ai' && (
+          <SystemChatbot player={player} />
+        )}
       </main>
 
       {/* Modals */}
@@ -405,11 +435,11 @@ export function App() {
         quests={quests}
       />
 
-      {/* Bottom Utility Bar (Backup, Restore, Delete Account) */}
+      {/* Bottom Utility Bar */}
       <footer className="border-t border-cyan-950 bg-[#040713] px-4 py-3 text-xs text-slate-500 font-mono">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
-            &copy; 2026 Tensei Quest (転生クエスト) &bull; Active Player: <strong className="text-cyan-400">{currentUsername}</strong>
+            &copy; 2026 Tensei Quest (転生クエスト) &bull; Player: <strong className="text-cyan-400">{currentUsername || 'Tamu'}</strong>
           </div>
 
           <div className="flex items-center gap-3">
@@ -434,13 +464,15 @@ export function App() {
               <RotateCcw className="w-3.5 h-3.5" /> Reset
             </button>
 
-            <button
-              onClick={handleDeleteAccount}
-              className="flex items-center gap-1 text-red-500/80 hover:text-red-400 transition"
-              title="Hapus Akun Ini Permanen"
-            >
-              <Trash2 className="w-3.5 h-3.5" /> Hapus Akun
-            </button>
+            {currentUsername && (
+              <button
+                onClick={handleDeleteAccount}
+                className="flex items-center gap-1 text-red-500/80 hover:text-red-400 transition"
+                title="Hapus Akun Ini Permanen"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Hapus Akun
+              </button>
+            )}
           </div>
         </div>
       </footer>

@@ -1,26 +1,26 @@
 import type { PlayerProfile, DailyQuest, TimetableSlot, SkillItem, PenaltyZoneState } from '../types';
 
 export const initialPlayer: PlayerProfile = {
-  name: 'Tri Wahyu Handoyo',
-  nim: '22518241023',
+  name: 'Awakened Hunter',
+  nim: 'HUNTER-001',
   rank: 'E',
   level: 1,
-  title: 'The Awakened E-Rank Hunter',
-  hp: 65,
+  title: 'The Awakened Vanguard',
+  hp: 75,
   maxHp: 100,
-  mp: 120,
-  maxMp: 120,
-  fatigue: 40,
+  mp: 100,
+  maxMp: 100,
+  fatigue: 30,
   maxFatigue: 100,
   exp: 0,
   maxExp: 100,
-  statPoints: 2,
+  statPoints: 3,
   stats: {
-    str: 8,  // Otot fisik (mulai dari 0 otot / gendut)
-    agi: 7,  // Kecepatan aksi & eksekusi konsisten
-    vit: 9,  // Daya tahan mood & pemulihan depresi
-    int: 38, // Rekayasa mekatronika, PCB, robotika, coding
-    per: 15, // Peka emosional & pemahaman situasi
+    str: 10, // Otot fisik & Calisthenics
+    agi: 10, // Kecepatan aksi & konsistensi
+    vit: 10, // Daya tahan mood & anti-depresi
+    int: 25, // Intelektual & pemikiran kritis
+    per: 12, // Kepekaan & fokus diri
   },
 };
 

@@ -1,4 +1,6 @@
-// Cryptographic hashing and Authentication Manager for Solo Leveling System
+// Client-side Zero-Knowledge Authentication Manager for Tensei Quest
+// Passwords are cryptographically hashed via SHA-256 before storage.
+// NO plain-text passwords or secret keys exist in the codebase.
 
 export async function hashPassword(password: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(password);
@@ -7,35 +9,27 @@ export async function hashPassword(password: string): Promise<string> {
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
+export interface HunterProfileSetup {
+  fullName: string;
+  mbti: string;
+  primaryWeakness: string;
+  targetGoal: string;
+}
+
 export interface StoredUser {
   username: string;
   passwordHash: string;
   createdAt: string;
+  setup?: HunterProfileSetup;
 }
 
-const USERS_REGISTRY_KEY = 'solo_leveling_registered_users_v1';
-const CURRENT_SESSION_KEY = 'solo_leveling_active_session_user';
-
-// Tri Wahyu's pre-seeded default account hash (password: "@Triwahyu45")
-// SHA-256 for "@Triwahyu45"
-const TRI_DEFAULT_HASH = '751212f7035dc672925ca83c79a906b72bde9bec9cff61e6e0fafebee05ddbc3';
+const USERS_REGISTRY_KEY = 'tensei_quest_registered_users_v1';
+const CURRENT_SESSION_KEY = 'tensei_quest_active_session_user';
 
 export function getRegisteredUsers(): StoredUser[] {
   try {
     const raw = localStorage.getItem(USERS_REGISTRY_KEY);
-    if (!raw) {
-      // Seed with Triwahyu45 default
-      const defaultList: StoredUser[] = [
-        {
-          username: 'Triwahyu45',
-          passwordHash: TRI_DEFAULT_HASH,
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(defaultList));
-      return defaultList;
-    }
-    return JSON.parse(raw);
+    return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
   }
@@ -56,7 +50,11 @@ export async function authenticateUser(username: string, passwordPlain: string):
   return false;
 }
 
-export async function registerNewUser(username: string, passwordPlain: string): Promise<{ success: boolean; message: string }> {
+export async function registerNewUser(
+  username: string,
+  passwordPlain: string,
+  setup?: HunterProfileSetup
+): Promise<{ success: boolean; message: string }> {
   const cleanUsername = username.trim();
   if (cleanUsername.length < 3) {
     return { success: false, message: 'Username minimal 3 karakter.' };
@@ -76,6 +74,7 @@ export async function registerNewUser(username: string, passwordPlain: string): 
     username: cleanUsername,
     passwordHash,
     createdAt: new Date().toISOString(),
+    setup,
   };
 
   users.push(newUser);
@@ -84,8 +83,8 @@ export async function registerNewUser(username: string, passwordPlain: string): 
   return { success: true, message: 'Registrasi Hunter berhasil!' };
 }
 
-export function getCurrentSessionUser(): string {
-  return localStorage.getItem(CURRENT_SESSION_KEY) || 'Triwahyu45';
+export function getCurrentSessionUser(): string | null {
+  return localStorage.getItem(CURRENT_SESSION_KEY);
 }
 
 export function logoutUser(): void {
@@ -94,15 +93,18 @@ export function logoutUser(): void {
 
 export function deleteCurrentUserAccount(): void {
   const current = getCurrentSessionUser();
+  if (!current) return;
+
   const users = getRegisteredUsers().filter((u) => u.username.toLowerCase() !== current.toLowerCase());
   localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(users));
   
-  // Wipe user's personal storage slots
-  localStorage.removeItem(`tri_wahyu_solo_leveling_v1_${current}_player`);
-  localStorage.removeItem(`tri_wahyu_solo_leveling_v1_${current}_quests`);
-  localStorage.removeItem(`tri_wahyu_solo_leveling_v1_${current}_slots`);
-  localStorage.removeItem(`tri_wahyu_solo_leveling_v1_${current}_skills`);
-  localStorage.removeItem(`tri_wahyu_solo_leveling_v1_${current}_penalty`);
+  // Wipe user's personal isolated storage slots
+  const prefix = `tensei_quest_v1_${current.toLowerCase()}`;
+  localStorage.removeItem(`${prefix}_player`);
+  localStorage.removeItem(`${prefix}_quests`);
+  localStorage.removeItem(`${prefix}_slots`);
+  localStorage.removeItem(`${prefix}_skills`);
+  localStorage.removeItem(`${prefix}_penalty`);
   
   localStorage.removeItem(CURRENT_SESSION_KEY);
 }
