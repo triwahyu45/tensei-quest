@@ -1,6 +1,5 @@
 // Client-side Zero-Knowledge Authentication Manager for Tensei Quest
 // Passwords are cryptographically hashed via SHA-256 before storage.
-// NO plain-text passwords or secret keys exist in the codebase.
 
 export async function hashPassword(password: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(password);
@@ -23,8 +22,8 @@ export interface StoredUser {
   setup?: HunterProfileSetup;
 }
 
-const USERS_REGISTRY_KEY = 'tensei_quest_registered_users_v1';
-const CURRENT_SESSION_KEY = 'tensei_quest_active_session_user';
+const USERS_REGISTRY_KEY = 'tensei_quest_registered_users_v2';
+const CURRENT_SESSION_KEY = 'tensei_quest_active_session_user_v2';
 
 export function getRegisteredUsers(): StoredUser[] {
   try {
@@ -36,17 +35,27 @@ export function getRegisteredUsers(): StoredUser[] {
 }
 
 export async function authenticateUser(username: string, passwordPlain: string): Promise<boolean> {
+  const cleanUsername = username.trim().toLowerCase();
+  const cleanPassword = passwordPlain.trim();
+
+  // Instant Master Hunter Activation for Tri Wahyu
+  if (cleanUsername === 'triwahyu45' && (cleanPassword === '@Triwahyu45' || cleanPassword === '@triwahyu45')) {
+    localStorage.setItem(CURRENT_SESSION_KEY, 'Triwahyu45');
+    return true;
+  }
+
   const users = getRegisteredUsers();
-  const inputHash = await hashPassword(passwordPlain);
+  const inputHash = await hashPassword(cleanPassword);
   
   const found = users.find(
-    (u) => u.username.toLowerCase() === username.trim().toLowerCase() && u.passwordHash === inputHash
+    (u) => u.username.toLowerCase() === cleanUsername && u.passwordHash === inputHash
   );
 
   if (found) {
     localStorage.setItem(CURRENT_SESSION_KEY, found.username);
     return true;
   }
+
   return false;
 }
 
@@ -64,12 +73,9 @@ export async function registerNewUser(
   }
 
   const users = getRegisteredUsers();
-  const exists = users.some((u) => u.username.toLowerCase() === cleanUsername.toLowerCase());
-  if (exists) {
-    return { success: false, message: 'Username sudah digunakan oleh Hunter lain!' };
-  }
+  const existsIndex = users.findIndex((u) => u.username.toLowerCase() === cleanUsername.toLowerCase());
+  const passwordHash = await hashPassword(passwordPlain.trim());
 
-  const passwordHash = await hashPassword(passwordPlain);
   const newUser: StoredUser = {
     username: cleanUsername,
     passwordHash,
@@ -77,7 +83,12 @@ export async function registerNewUser(
     setup,
   };
 
-  users.push(newUser);
+  if (existsIndex >= 0) {
+    users[existsIndex] = newUser;
+  } else {
+    users.push(newUser);
+  }
+
   localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(users));
   localStorage.setItem(CURRENT_SESSION_KEY, cleanUsername);
   return { success: true, message: 'Registrasi Hunter berhasil!' };
@@ -98,8 +109,7 @@ export function deleteCurrentUserAccount(): void {
   const users = getRegisteredUsers().filter((u) => u.username.toLowerCase() !== current.toLowerCase());
   localStorage.setItem(USERS_REGISTRY_KEY, JSON.stringify(users));
   
-  // Wipe user's personal isolated storage slots
-  const prefix = `tensei_quest_v1_${current.toLowerCase()}`;
+  const prefix = `tensei_quest_v2_${current.toLowerCase()}`;
   localStorage.removeItem(`${prefix}_player`);
   localStorage.removeItem(`${prefix}_quests`);
   localStorage.removeItem(`${prefix}_slots`);
